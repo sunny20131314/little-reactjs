@@ -208,7 +208,7 @@ function generateComponentChildren(prevChildren, nextChildrenElements) {
         //调用_shouldUpdateReactComponent判断是否是更新
         if (_shouldUpdateReactComponent(prevElement, nextElement)) {
             //更新的话直接递归调用子节点的receiveComponent就好了
-            prevChild.receiveComponent(nextElement);
+            prevChild.receiveComponent(nextElement);   // 修改了 prevChildren
             //然后继续使用老的component
             nextChildren[name] = prevChild;
         } else {
@@ -231,28 +231,37 @@ ReactDOMComponent.prototype._diff = function(diffQueue, nextChildrenElements) {
     //_renderedChildren 本来是数组，我们搞成map
     var prevChildren = flattenChildren(self._renderedChildren);
     //生成新的子节点的component对象集合，这里注意，会复用老的component对象
-    var nextChildren = generateComponentChildren(prevChildren, nextChildrenElements);
+    var nextChildren = generateComponentChildren(prevChildren, nextChildrenElements);  // 修改了 prevChildren
     //重新赋值_renderedChildren，使用最新的。
     self._renderedChildren = []
     $.each(nextChildren, function(key, instance) {
         self._renderedChildren.push(instance);
     })
 
-    /**注意新增代码**/
+    if (!nextChildren && !prevChildren) {
+      return;
+    }
+  // @attention： 为什么前后的 prevChildren 不一致，为什么要在generateComponentChildren中修改prevChildren，而不重新生成一个新的对象？
+  //        在某些情况下会生成新的对象，是在组件不同
+  //        在某些情况下会复用之前的对象，之所以会修改是因为方便下面对比，是不是同一个组件（component）,而不是新生成的另一个对象~
+
+  /**注意新增代码**/
     var lastIndex = 0; //代表访问的最后一次的老的集合的位置
 
     var nextIndex = 0; //代表到达的新的节点的index
     //通过对比两个集合的差异，组装差异节点添加到队列中
-    for (name in nextChildren) {
+    for (let name in nextChildren) {
         if (!nextChildren.hasOwnProperty(name)) {
             continue;
         }
         var prevChild = prevChildren && prevChildren[name];
         var nextChild = nextChildren[name];
+        console.log((prevChild), 'prevChild', (nextChild), 'nextChild', name, 'name', prevChild === nextChild );
         //相同的话，说明是使用的同一个component,所以我们需要做移动的操作
         if (prevChild === nextChild) {
             //添加差异对象，类型：MOVE_EXISTING
             /**注意新增代码**/
+            // @attention 为什么只判断 prevChild._mountIndex < lastIndex？ 而不是 prevChild._mountIndex !== lastInde 插入位置疑问？
             prevChild._mountIndex < lastIndex && diffQueue.push({
                     parentId: self._rootNodeID,
                     parentNode: $('[data-reactid=' + self._rootNodeID + ']'),
@@ -292,7 +301,7 @@ ReactDOMComponent.prototype._diff = function(diffQueue, nextChildrenElements) {
                     toIndex: nextIndex,
                     markup: nextChild.mountComponent() //新增的节点，多一个此属性，表示新节点的dom内容
                 })
-                //如果以前已经渲染过了，记得先去掉以前所有的事件监听
+                //如果以前已经渲染过了，记得先去掉以前所有的事件监听 todo 为什么移除事件两次，在更新props中也移除了两次？
             if (prevChildren[name]._rootNodeID) {
                 $(document).undelegate('.' + prevChildren[name]._rootNodeID);
             }
@@ -489,6 +498,7 @@ var _shouldUpdateReactComponent = function(prevElement, nextElement) {
 
 
 
+// instantiateReactComponent 通过判断元素类型（类型包括：object、string、function）创建元素实例
 function instantiateReactComponent(node) {
     //文本节点的情况
     if (typeof node === 'string' || typeof node === 'number') {
