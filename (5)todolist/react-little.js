@@ -324,12 +324,12 @@ ReactDOMComponent.prototype._patch = function(updates) {
         if (update.type === UPATE_TYPES.MOVE_EXISTING || update.type === UPATE_TYPES.REMOVE_NODE) {
             var updatedIndex = update.fromIndex;
             var updatedChild = $(update.parentNode.children().get(updatedIndex));
-            var parentID = update.parentID;
+            var parentId = update.parentId;
 
             //所有需要更新的节点都保存下来，方便后面使用
-            initialChildren[parentID] = initialChildren[parentID] || [];
-            //使用parentID作为简易命名空间
-            initialChildren[parentID][updatedIndex] = updatedChild;
+            initialChildren[parentId] = initialChildren[parentId] || [];
+            //使用parentId作为简易命名空间
+            initialChildren[parentId][updatedIndex] = updatedChild;
 
 
             //所有需要修改的节点先删除,对于move的，后面再重新插入到正确的位置即可
@@ -352,7 +352,7 @@ ReactDOMComponent.prototype._patch = function(updates) {
                 insertChildAt(update.parentNode, $(update.markup), update.toIndex);
                 break;
             case UPATE_TYPES.MOVE_EXISTING:
-                insertChildAt(update.parentNode, initialChildren[update.parentID][update.fromIndex], update.toIndex);
+                insertChildAt(update.parentNode, initialChildren[update.parentId][update.fromIndex], update.toIndex);
                 break;
             case UPATE_TYPES.REMOVE_NODE:
                 // 什么都不需要做，因为上面已经帮忙删除掉了
